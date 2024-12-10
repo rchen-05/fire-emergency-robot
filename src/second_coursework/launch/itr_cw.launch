@@ -1,0 +1,22 @@
+<launch>
+    <!-- Define arguments -->
+    <arg name="vid_folder" default="$(find second_coursework)/videos"/>
+
+    <!-- Stage simulator with map -->
+    <include file="$(find rosplan_stage_demo)/launch/empty_stage_single_robot.launch"/>
+    
+    <!-- Video player that simulates camera feed -->
+    <node name="video_player" pkg="second_coursework" type="itr_cw2425CS" 
+          args="--video_folder $(arg vid_folder) --test"/>
+    
+    <!-- Add YOLO detector node before other nodes -->
+    <node name="yolo_detector" pkg="second_coursework" type="yolo_detector.py" output="screen"/>
+    
+    <!-- Your nodes -->
+    <node name="patrol_action_server" pkg="second_coursework" type="emergency_action_server.py" output="screen"/>
+    <node name="emergency_subscriber" pkg="second_coursework" type="emergency_subscriber.py" output="screen"/>
+    
+    <!-- Visualization in RViz -->
+    <node name="rviz" pkg="rviz" type="rviz" 
+          args="-d $(find rosplan_stage_demo)/config/rosplan_stage_demo.rviz"/>
+</launch>

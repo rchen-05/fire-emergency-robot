@@ -1,0 +1,2 @@
+second_coursework
+-DCATKIN_DEVEL_PREFIX=/home/k23020720/catkin_ws/devel -DCMAKE_INSTALL_PREFIX=/home/k23020720/catkin_ws/install -G Unix Makefiles
