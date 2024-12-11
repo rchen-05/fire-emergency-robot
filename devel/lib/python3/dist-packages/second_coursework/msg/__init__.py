@@ -7,4 +7,3 @@ from ._PatrolFeedback import *
 from ._PatrolGoal import *
 from ._PatrolResult import *
 from ._YOLODetection import *
-from ._yolo_detection import *

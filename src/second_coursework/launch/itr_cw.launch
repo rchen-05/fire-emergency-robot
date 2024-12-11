@@ -1,4 +1,8 @@
 <launch>
+    <!-- Set sim time parameter -->
+    <param name="/use_sim_time" value="true"/>
+    <param name="/stage/use_sim_time" value="true"/>
+
     <!-- Define arguments -->
     <arg name="vid_folder" default="$(find second_coursework)/videos"/>
 
@@ -9,14 +13,27 @@
     <node name="video_player" pkg="second_coursework" type="itr_cw2425CS" 
           args="--video_folder $(arg vid_folder) --test"/>
     
-    <!-- Add YOLO detector node before other nodes -->
-    <node name="yolo_detector" pkg="second_coursework" type="yolo_detector.py" output="screen"/>
+    <!-- Add YOLO detector with respawn -->
+    <node name="yolo_detector" pkg="second_coursework" type="yolo_detector.py" 
+          output="screen" respawn="true" respawn_delay="5"/>
     
-    <!-- Your nodes -->
-    <node name="patrol_action_server" pkg="second_coursework" type="emergency_action_server.py" output="screen"/>
-    <node name="emergency_subscriber" pkg="second_coursework" type="emergency_subscriber.py" output="screen"/>
+    <!-- Add delay to ensure services are up -->
+    <arg name="startup_delay" default="2"/>
+    <node name="startup_delay" pkg="rospy" type="sleep" args="$(arg startup_delay)"/>
+    
+    <!-- Your nodes with respawn -->
+    <node name="patrol_action_server" pkg="second_coursework" type="emergency_action_server.py" 
+          output="screen" respawn="true" respawn_delay="5"/>
+    <node name="emergency_subscriber" pkg="second_coursework" type="emergency_subscriber.py" 
+          output="screen" respawn="true" respawn_delay="5"/>
+    
+    <!-- Add sound_play node for TTS -->
+    <node name="soundplay_node" pkg="sound_play" type="soundplay_node.py"/>
     
     <!-- Visualization in RViz -->
     <node name="rviz" pkg="rviz" type="rviz" 
           args="-d $(find rosplan_stage_demo)/config/rosplan_stage_demo.rviz"/>
+    
+    <!-- Add remap for clock -->
+    <remap from="/clock" to="/stage/clock"/>
 </launch>

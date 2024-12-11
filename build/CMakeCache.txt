@@ -374,7 +374,7 @@ RT_LIBRARY:FILEPATH=/usr/lib/x86_64-linux-gnu/librt.so
 SETUPTOOLS_DEB_LAYOUT:BOOL=ON
 
 //Name of the computer/site where compile is being run
-SITE:STRING=nmslab-004012.nms.kcl.ac.uk
+SITE:STRING=nmslab-008327.nms.kcl.ac.uk
 
 //LSB Distrib tag
 UBUNTU:BOOL=TRUE
@@ -508,9 +508,6 @@ second_coursework_BINARY_DIR:STATIC=/home/k23020720/catkin_ws/build/second_cours
 
 //Value Computed by CMake
 second_coursework_SOURCE_DIR:STATIC=/home/k23020720/catkin_ws/src/second_coursework
-
-//The directory containing a CMake configuration file for sensor_msgs.
-sensor_msgs_DIR:PATH=/opt/ros/noetic/share/sensor_msgs/cmake
 
 //The directory containing a CMake configuration file for smach.
 smach_DIR:PATH=/opt/ros/noetic/share/smach/cmake
