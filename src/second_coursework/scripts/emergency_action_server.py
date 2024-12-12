@@ -63,45 +63,28 @@ class PatrolServer:
     # In emergency_action_server.py, add to PatrolServer class:
 
     def execute_cb(self, goal):
-        self._start_time = rospy.Time.now()
-        self._duration = goal.patrol_duration
-        
-        # Create state machine with all required keys
+        # Create state machine with properly initialized userdata
         sm = StateMachine(
-            outcomes=['succeeded', 'aborted', 'preempted'],
-            input_keys=['start_time', 'duration'],  # Add these as input keys
-            output_keys=['people_poses', 'cat_poses', 'dog_poses', 'new_people', 'new_cats', 'new_dogs', 'current_target']
+            outcomes=['succeeded', 'aborted', 'preempted']
         )
         
-        # Initialize state machine userdata
+        # Initialize all required userdata
+        sm.userdata.start_time = rospy.Time.now()
+        sm.userdata.duration = goal.patrol_duration
         sm.userdata.people_poses = []
         sm.userdata.cat_poses = []
         sm.userdata.dog_poses = []
         sm.userdata.new_people = 0
         sm.userdata.new_cats = 0
         sm.userdata.new_dogs = 0
-        sm.userdata.current_target = Pose()
-        sm.userdata.detections = {'people': [], 'cats': [], 'dogs': []}
-
-        # Add duration to userdata for time checking
-        sm.userdata.start_time = self._start_time
-        sm.userdata.duration = self._duration
         
-        # Add PatrolState to state machine
         with sm:
             StateMachine.add('PATROL', 
-                            PatrolState(),
-                            transitions={'succeeded':'RETURN',
-                                    'aborted':'aborted',
-                                    'preempted':'preempted'})
-            
-            StateMachine.add('RETURN', 
-                            SimpleActionState('move_base', MoveBaseAction, goal_cb=self.return_goal_cb),
-                            transitions={'succeeded':'succeeded',
-                                    'aborted':'aborted',
-                                    'preempted':'preempted'})
+                           PatrolState(),
+                           transitions={'succeeded':'succeeded',
+                                      'aborted':'aborted',
+                                      'preempted':'preempted'})
         
-        # Execute state machine
         outcome = sm.execute()
         
         # Handle results
@@ -110,13 +93,19 @@ class PatrolServer:
             self._result.cat_positions = sm.userdata.cat_poses
             self._result.dog_positions = sm.userdata.dog_poses
             self._server.set_succeeded(self._result)
+            
+            # Safe feedback publishing
+            last_pose = Pose()  # Default empty pose
+            self.publish_feedback(
+                getattr(sm.userdata, 'new_people', 0),
+                getattr(sm.userdata, 'new_cats', 0),
+                getattr(sm.userdata, 'new_dogs', 0),
+                last_pose
+            )
         elif outcome == 'preempted':
             self._server.set_preempted()
         else:
             self._server.set_aborted()
-
-        # Publish feedback
-        self.publish_feedback(sm.userdata.new_people, sm.userdata.new_cats, sm.userdata.new_dogs, sm.userdata.current_target)
 
     def return_goal_cb(self, userdata, goal):
         goal.target_pose.header.frame_id = "map"

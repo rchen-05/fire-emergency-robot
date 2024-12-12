@@ -9,21 +9,20 @@ from tf.transformations import quaternion_from_euler
 
 class PatrolState(State):
     def __init__(self):
-        # Update input_keys to include all required keys
         State.__init__(self, 
                       outcomes=['succeeded', 'aborted', 'preempted'],
-                      input_keys=['start_time', 'duration', 'people_poses', 'cat_poses', 'dog_poses'],
-                      output_keys=['people_poses', 'cat_poses', 'dog_poses', 'new_people', 
-                                 'new_cats', 'new_dogs', 'current_target'])
-        
+                      input_keys=['start_time', 'duration'],
+                      output_keys=['people_poses', 'cat_poses', 'dog_poses', 
+                                 'new_people', 'new_cats', 'new_dogs'])
+                                 
         # Adjusted points to be more centered in rooms and away from walls
         self.points = [
             # Room A - keep more distance from walls
             [2.0, 8.0],    # Center
-            [1.5, 9.0],    # Top left
-            [2.5, 9.0],    # Top right 
-            [1.5, 7.0],    # Bottom left
-            [2.5, 7.0],    # Bottom right
+            [1.0, 9.0],    # Top left
+            [2.8, 9.0],    # Top right 
+            [1.0, 7.0],    # Bottom left
+            [.8, 7.0],    # Bottom right
             
             # Room B
             [6.0, 8.0],    # Center
@@ -41,10 +40,10 @@ class PatrolState(State):
             
             # Room D
             [2.0, 3.3],    # Center
-            [1.5, 4.3],    # Top left
-            [2.5, 4.3],    # Top right
-            [1.5, 2.3],    # Bottom left
-            [2.5, 2.3],    # Bottom right
+            [1.0, 4.3],    # Top left
+            [2.8, 4.3],    # Top right
+            [1.0, 2.3],    # Bottom left
+            [2.8, 2.3],    # Bottom right
             
             # Room E
             [6.0, 3.6],    # Center
@@ -61,44 +60,24 @@ class PatrolState(State):
             [11.1, 1.6],   # Bottom right
         ]
         self.end_point = [6.0, 3.6]
-        
-        # Update inner state machine to match outer state's keys
+
+        # Modified state machine initialization to handle userdata properly
         self.sm = StateMachine(
-            outcomes=['succeeded', 'aborted', 'preempted'],
-            input_keys=['start_time', 'duration', 'people_poses', 'cat_poses', 'dog_poses'],
-            output_keys=['detections', 'people_poses', 'cat_poses', 'dog_poses', 
-                        'new_people', 'new_cats', 'new_dogs', 'current_target']
+            outcomes=['succeeded', 'aborted', 'preempted']
         )
         
-        # Initialize all userdata fields
-        self.sm.userdata.people_poses = []
-        self.sm.userdata.cat_poses = []
-        self.sm.userdata.dog_poses = []
-        self.sm.userdata.new_people = 0
-        self.sm.userdata.new_cats = 0
-        self.sm.userdata.new_dogs = 0
-        self.sm.userdata.current_target = Pose()
-        self.sm.userdata.detections = {'people': [], 'cats': [], 'dogs': []}
-        
         with self.sm:
-            StateMachine.add('NAVIGATE', NavigationState(),
-                           transitions={'reached':'DETECT',
-                                      'failed':'aborted',
-                                      'preempted':'preempted'},
-                           remapping={'target_pose':'current_target',
-                                      'people_poses':'people_poses',
-                                      'cat_poses':'cat_poses',
-                                      'dog_poses':'dog_poses'})
+            StateMachine.add('NAVIGATE', 
+                NavigationState(),
+                transitions={'reached':'DETECT',
+                           'failed':'aborted',
+                           'preempted':'preempted'})
                            
-            StateMachine.add('DETECT', DetectionState(),
-                           transitions={'detected':'succeeded',
-                                      'none':'succeeded',
-                                      'preempted':'preempted'},
-                           remapping={'current_pose':'current_target',
-                                      'detections':'detections',
-                                      'people_poses':'people_poses',
-                                      'cat_poses':'cat_poses',
-                                      'dog_poses':'dog_poses'})
+            StateMachine.add('DETECT', 
+                DetectionState(),
+                transitions={'detected':'succeeded',
+                           'none':'succeeded',
+                           'preempted':'preempted'})
 
     def create_pose(self, point):
         pose = Pose()
@@ -138,42 +117,59 @@ class PatrolState(State):
         return pose
 
     def execute(self, userdata):
+        # Initialize result containers
+        userdata.people_poses = []
+        userdata.cat_poses = []
+        userdata.dog_poses = []
+        userdata.new_people = 0
+        userdata.new_cats = 0
+        userdata.new_dogs = 0
+
         rospy.loginfo("Patrolling")
         try:
-            userdata.people_poses = []
-            userdata.cat_poses = []
-            userdata.dog_poses = []
-            
-            # Visit each point
             for point in self.points:
-                # Check if duration has expired
+                # Check time limit
                 if (rospy.Time.now() - userdata.start_time) >= userdata.duration:
                     rospy.loginfo("Patrol duration expired, returning to room E")
-                    return 'succeeded'
-                
+                    # Create target pose for return
+                    target_pose = self.create_pose(self.end_point)
+                    self.sm.userdata.target_pose = target_pose
+                    self.sm.userdata.current_pose = target_pose
+                    return_outcome = self.sm.execute()
+                    return 'succeeded' if return_outcome == 'succeeded' else 'aborted'
+
                 if rospy.is_shutdown() or self.preempt_requested():
                     return 'preempted'
+
+                # Set up current navigation target
+                target_pose = self.create_pose(point)
+                self.sm.userdata.target_pose = target_pose
+                self.sm.userdata.current_pose = target_pose
+                self.sm.userdata.detected_poses = {'people': [], 'cats': [], 'dogs': []}
                 
-                self.sm.userdata.current_target = self.create_pose(point)
                 outcome = self.sm.execute()
-                
                 if outcome != 'succeeded':
                     return outcome
-                    
-                # Update detections
-                rospy.loginfo("1")
-                if hasattr(self.sm.userdata, 'detections'):
-                    rospy.loginfo("2")
-                    userdata.people_poses.extend(self.sm.userdata.detections['people'])
-                    userdata.cat_poses.extend(self.sm.userdata.detections['cats'])
-                    userdata.dog_poses.extend(self.sm.userdata.detections['dogs'])
-                
+
+                # Update main userdata from detection results
+                if hasattr(self.sm.userdata, 'detected_poses'):
+                    for category in ['people', 'cats', 'dogs']:
+                        if self.sm.userdata.detected_poses[category]:
+                            getattr(userdata, f"{category}_poses").extend(
+                                self.sm.userdata.detected_poses[category])
+                            setattr(userdata, f"new_{category}", 
+                                getattr(userdata, f"new_{category}") + 
+                                len(self.sm.userdata.detected_poses[category]))
+
                 rospy.sleep(1.0)
-                rospy.loginfo("3")
             
-            # Return to start
-            self.sm.userdata.current_target = self.create_pose(self.end_point)
-            return 'succeeded' if self.sm.execute() != 'aborted' else 'aborted'
+            # Always return to room E at the end
+            rospy.loginfo("Patrol complete, returning to room E")
+            target_pose = self.create_pose(self.end_point)
+            self.sm.userdata.target_pose = target_pose
+            self.sm.userdata.current_pose = target_pose
+            return_outcome = self.sm.execute()
+            return 'succeeded' if return_outcome == 'succeeded' else 'aborted'
             
         except Exception as e:
             rospy.logerr(f"Error in patrol: {e}")

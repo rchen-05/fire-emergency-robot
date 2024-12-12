@@ -12,8 +12,7 @@ class DetectionState(State):
         State.__init__(self,
                       outcomes=['detected', 'none', 'preempted'],
                       input_keys=['current_pose'],
-                      output_keys=['detections', 'new_people', 'new_cats', 'new_dogs',
-                                 'people_poses', 'cat_poses', 'dog_poses'])  # Add pose outputs
+                      output_keys=['detected_poses'])  # Simplified output
         
         self.sound_client = SoundClient()
         self.marker_pub = rospy.Publisher('/detection_markers', MarkerArray, queue_size=10)
@@ -74,8 +73,7 @@ class DetectionState(State):
             rospy.loginfo(f"Got {len(response.detections)} YOLO detections")
             current_pose = userdata.current_pose
             
-            detections = {'people': [], 'cats': [], 'dogs': []}
-            new_counts = {'person': 0, 'cat': 0, 'dog': 0}
+            detected = {'people': [], 'cats': [], 'dogs': []}
             
             for detection in response.detections:
                 rospy.loginfo(f"Raw detection: class={detection.name}, conf={detection.confidence}")
@@ -83,36 +81,26 @@ class DetectionState(State):
                     continue
                 
                 # Map YOLO class names to our categories
-                class_map = {
-                    'person': 'person',
-                    'cat': 'cat',
-                    'dog': 'dog'
+                category_map = {
+                    'person': 'people',
+                    'cat': 'cats',
+                    'dog': 'dogs'
                 }
                 
-                detection_class = class_map.get(detection.name.lower())
-                if detection_class:
-                    rospy.loginfo(f"Detected {detection_class} with confidence {detection.confidence:.2f}")
+                category = category_map.get(detection.name.lower())
+                if category and self.is_new_detection(current_pose, self.previous_detections[category[:-1]]):
+                    if category == 'people':
+                        self.sound_client.say("Help is coming. Please evacuate if possible.")
+                        rospy.loginfo("Person detected! Announcing evacuation message.")
                     
-                    if self.is_new_detection(current_pose, self.previous_detections[detection_class]):
-                        if detection_class == 'person':
-                            self.sound_client.say("Help is coming. Please evacuate if possible.")
-                            rospy.loginfo("Person detected! Announcing evacuation message.")
-                        
-                        self.previous_detections[detection_class].append(current_pose)
-                        new_counts[detection_class] += 1
-                        self.publish_marker(current_pose, detection_class, True)
-                        
-                        category = detection_class + 's'
-                        if category == 'persons': category = 'people'
-                        detections[category].append(current_pose)
+                    self.previous_detections[category[:-1]].append(current_pose)
+                    self.publish_marker(current_pose, category[:-1], True)
+                    detected[category].append(current_pose)
             
-            total_detections = sum(new_counts.values())
-            rospy.loginfo(f"Found {total_detections} new objects: People={new_counts['person']}, Cats={new_counts['cat']}, Dogs={new_counts['dog']}")
+            total_detections = sum(len(v) for v in detected.values())
+            rospy.loginfo(f"Found {total_detections} new objects: People={len(detected['people'])}, Cats={len(detected['cats'])}, Dogs={len(detected['dogs'])}")
             
-            userdata.detections = detections
-            userdata.new_people = new_counts['person']
-            userdata.new_cats = new_counts['cat']
-            userdata.new_dogs = new_counts['dog']
+            userdata.detected_poses = detected
             
             return 'detected' if total_detections > 0 else 'none'
             
