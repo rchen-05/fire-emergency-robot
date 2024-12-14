@@ -63,20 +63,15 @@ class PatrolServer:
     # In emergency_action_server.py, add to PatrolServer class:
 
     def execute_cb(self, goal):
-        # Create state machine with properly initialized userdata
+        # Create state machine with minimal userdata
         sm = StateMachine(
             outcomes=['succeeded', 'aborted', 'preempted']
         )
         
-        # Initialize all required userdata
+        # Initialize only necessary userdata
         sm.userdata.start_time = rospy.Time.now()
         sm.userdata.duration = goal.patrol_duration
-        sm.userdata.people_poses = []
-        sm.userdata.cat_poses = []
-        sm.userdata.dog_poses = []
-        sm.userdata.new_people = 0
-        sm.userdata.new_cats = 0
-        sm.userdata.new_dogs = 0
+        sm.userdata.latest_detection_pose = None
         
         with sm:
             StateMachine.add('PATROL', 
@@ -87,21 +82,12 @@ class PatrolServer:
         
         outcome = sm.execute()
         
-        # Handle results
         if outcome == 'succeeded':
-            self._result.people_positions = sm.userdata.people_poses
-            self._result.cat_positions = sm.userdata.cat_poses
-            self._result.dog_positions = sm.userdata.dog_poses
+            self._result.last_detection = sm.userdata.latest_detection_pose or Pose()
             self._server.set_succeeded(self._result)
             
-            # Safe feedback publishing
-            last_pose = Pose()  # Default empty pose
-            self.publish_feedback(
-                getattr(sm.userdata, 'new_people', 0),
-                getattr(sm.userdata, 'new_cats', 0),
-                getattr(sm.userdata, 'new_dogs', 0),
-                last_pose
-            )
+            # Publish feedback with latest detection position
+            self.publish_feedback(sm.userdata.latest_detection_pose or Pose())
         elif outcome == 'preempted':
             self._server.set_preempted()
         else:

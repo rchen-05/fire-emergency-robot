@@ -12,72 +12,82 @@ class PatrolState(State):
         State.__init__(self, 
                       outcomes=['succeeded', 'aborted', 'preempted'],
                       input_keys=['start_time', 'duration'],
-                      output_keys=['people_poses', 'cat_poses', 'dog_poses', 
-                                 'new_people', 'new_cats', 'new_dogs'])
+                      output_keys=['latest_detection_pose'])  # Simplified output
                                  
         # Adjusted points to be more centered in rooms and away from walls
         self.points = [
             # Room A - keep more distance from walls
             [2.0, 8.0],    # Center
-            [1.0, 9.0],    # Top left
-            [2.8, 9.0],    # Top right 
-            [1.0, 7.0],    # Bottom left
-            [.8, 7.0],    # Bottom right
+            [0.7, 9.9],    # Top left
+            [2.9, 9.9],    # Top right 
+            [0.7, 6.7],    # Bottom left
+            [2.9, 6.7],    # Bottom right
             
             # Room B
             [6.0, 8.0],    # Center
-            [5.5, 9.0],    # Top left
-            [6.5, 9.0],    # Top right
-            [5.5, 7.0],    # Bottom left
-            [6.5, 7.0],    # Bottom right
+            [4.5, 9.9],    # Top left
+            [7.5, 9.9],    # Top right
+            [4.5, 6.7],    # Bottom left
+            [7.5, 6.7],    # Bottom right
             
             # Room C
             [10.0, 8.0],   # Center
-            [9.5, 9.0],    # Top left
-            [10.5, 9.0],   # Top right
-            [9.5, 7.0],    # Bottom left
-            [10.5, 7.0],   # Bottom right
-            
-            # Room D
-            [2.0, 3.3],    # Center
-            [1.0, 4.3],    # Top left
-            [2.8, 4.3],    # Top right
-            [1.0, 2.3],    # Bottom left
-            [2.8, 2.3],    # Bottom right
-            
+            [8.9, 9.9],    # Top left
+            [12.3, 9.9],   # Top right
+            [8.9, 6.7],    # Bottom left
+            [12.3, 6.7],   # Bottom right
+
+            # Room F
+            [10.0, 2.6],   # Center
+            [8.9, 4.2],   # Top left
+            [12.3, 4.2],   # Top right
+            [8.9, 1.6],   # Bottom left
+            [12.3, 1.6],   # Bottom right
+
             # Room E
             [6.0, 3.6],    # Center
-            [5.5, 4.6],    # Top left
-            [6.5, 4.6],    # Top right
-            [5.5, 2.6],    # Bottom left
-            [6.5, 2.6],    # Bottom right
+            [4.5, 5.1],    # Top left
+            [7.5, 5.1],    # Top right
+            [4.5, 1.7],    # Bottom left
+            [7.5, 1.7],    # Bottom right
+
+            # Room D
+            [2.0, 3.3],    # Center
+            [0.7, 5.1],    # Top left
+            [2.9, 5.1],    # Top right
+            [0.7, 1.7],    # Bottom left
+            [2.9, 1.7],    # Bottom right
             
-            # Room F
-            [10.6, 2.6],   # Center
-            [10.1, 3.6],   # Top left
-            [11.1, 3.6],   # Top right
-            [10.1, 1.6],   # Bottom left
-            [11.1, 1.6],   # Bottom right
+            
+            
+            
         ]
         self.end_point = [6.0, 3.6]
 
-        # Modified state machine initialization to handle userdata properly
         self.sm = StateMachine(
             outcomes=['succeeded', 'aborted', 'preempted']
         )
+        
+        # Initialize only necessary userdata
+        self.sm.userdata.target_pose = None
+        self.sm.userdata.current_pose = None
+        self.sm.userdata.latest_detection_pose = None
         
         with self.sm:
             StateMachine.add('NAVIGATE', 
                 NavigationState(),
                 transitions={'reached':'DETECT',
                            'failed':'aborted',
-                           'preempted':'preempted'})
+                           'preempted':'preempted'},
+                remapping={'target_pose':'target_pose'})
                            
             StateMachine.add('DETECT', 
                 DetectionState(),
                 transitions={'detected':'succeeded',
                            'none':'succeeded',
-                           'preempted':'preempted'})
+                           'preempted':'preempted'},
+                remapping={'current_pose':'current_pose',
+                          'latest_detection_pose':'latest_detection_pose'})
 
     def create_pose(self, point):
         pose = Pose()
@@ -117,14 +127,9 @@ class PatrolState(State):
         return pose
 
     def execute(self, userdata):
-        # Initialize result containers
-        userdata.people_poses = []
-        userdata.cat_poses = []
-        userdata.dog_poses = []
-        userdata.new_people = 0
-        userdata.new_cats = 0
-        userdata.new_dogs = 0
-
+        # Initialize result
+        userdata.latest_detection_pose = None
+        
         rospy.loginfo("Patrolling")
         try:
             for point in self.points:
@@ -145,21 +150,14 @@ class PatrolState(State):
                 target_pose = self.create_pose(point)
                 self.sm.userdata.target_pose = target_pose
                 self.sm.userdata.current_pose = target_pose
-                self.sm.userdata.detected_poses = {'people': [], 'cats': [], 'dogs': []}
                 
                 outcome = self.sm.execute()
                 if outcome != 'succeeded':
                     return outcome
 
-                # Update main userdata from detection results
-                if hasattr(self.sm.userdata, 'detected_poses'):
-                    for category in ['people', 'cats', 'dogs']:
-                        if self.sm.userdata.detected_poses[category]:
-                            getattr(userdata, f"{category}_poses").extend(
-                                self.sm.userdata.detected_poses[category])
-                            setattr(userdata, f"new_{category}", 
-                                getattr(userdata, f"new_{category}") + 
-                                len(self.sm.userdata.detected_poses[category]))
+                # Update main userdata with latest detection if any
+                if hasattr(self.sm.userdata, 'latest_detection_pose'):
+                    userdata.latest_detection_pose = self.sm.userdata.latest_detection_pose
 
                 rospy.sleep(1.0)
             

@@ -12,7 +12,7 @@ class DetectionState(State):
         State.__init__(self,
                       outcomes=['detected', 'none', 'preempted'],
                       input_keys=['current_pose'],
-                      output_keys=['detected_poses'])  # Simplified output
+                      output_keys=['latest_detection_pose'])  # Simplified to just track latest position
         
         self.sound_client = SoundClient()
         self.marker_pub = rospy.Publisher('/detection_markers', MarkerArray, queue_size=10)
@@ -73,36 +73,27 @@ class DetectionState(State):
             rospy.loginfo(f"Got {len(response.detections)} YOLO detections")
             current_pose = userdata.current_pose
             
-            detected = {'people': [], 'cats': [], 'dogs': []}
+            detected_anything = False
             
             for detection in response.detections:
-                rospy.loginfo(f"Raw detection: class={detection.name}, conf={detection.confidence}")
                 if detection.confidence < 0.5:
                     continue
                 
-                # Map YOLO class names to our categories
-                category_map = {
-                    'person': 'people',
-                    'cat': 'cats',
-                    'dog': 'dogs'
-                }
-                
-                category = category_map.get(detection.name.lower())
-                if category and self.is_new_detection(current_pose, self.previous_detections[category[:-1]]):
-                    if category == 'people':
-                        self.sound_client.say("Help is coming. Please evacuate if possible.")
-                        rospy.loginfo("Person detected! Announcing evacuation message.")
-                    
-                    self.previous_detections[category[:-1]].append(current_pose)
-                    self.publish_marker(current_pose, category[:-1], True)
-                    detected[category].append(current_pose)
+                # Any valid detection will update the latest position
+                if detection.name.lower() in ['person', 'cat', 'dog']:
+                    if self.is_new_detection(current_pose, self.previous_detections[detection.name.lower()]):
+                        detected_anything = True
+                        userdata.latest_detection_pose = current_pose
+                        
+                        # Still maintain markers and announcements
+                        self.previous_detections[detection.name.lower()].append(current_pose)
+                        self.publish_marker(current_pose, detection.name.lower(), True)
+                        
+                        if detection.name.lower() == 'person':
+                            self.sound_client.say("Help is coming. Please evacuate if possible.")
+                            rospy.loginfo("Person detected! Announcing evacuation message.")
             
-            total_detections = sum(len(v) for v in detected.values())
-            rospy.loginfo(f"Found {total_detections} new objects: People={len(detected['people'])}, Cats={len(detected['cats'])}, Dogs={len(detected['dogs'])}")
-            
-            userdata.detected_poses = detected
-            
-            return 'detected' if total_detections > 0 else 'none'
+            return 'detected' if detected_anything else 'none'
             
         except rospy.ServiceException as e:
             rospy.logerr(f"YOLO service call failed: {e}")
