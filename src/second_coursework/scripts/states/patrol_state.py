@@ -31,7 +31,7 @@ class PatrolState(State):
             [7.5, 6.7],    # Bottom right
             
             # Room C
-            [10.0, 8.0],   # Center
+            [10.7, 8.3],   # Center
             [8.9, 9.9],    # Top left
             [12.3, 9.9],   # Top right
             [8.9, 6.7],    # Bottom left
@@ -99,7 +99,7 @@ class PatrolState(State):
         room_centers = {
             'A': [2.0, 8.0],
             'B': [6.0, 8.0],
-            'C': [10.0, 8.0],
+            'C': [10.7, 8.3],
             'D': [2.0, 3.3],
             'E': [6.0, 3.6],
             'F': [10.6, 2.6]

@@ -83,11 +83,12 @@ class PatrolServer:
         outcome = sm.execute()
         
         if outcome == 'succeeded':
-            self._result.last_detection = sm.userdata.latest_detection_pose or Pose()
+            last_pose = sm.userdata.latest_detection_pose or Pose()
+            self._result.last_detection = last_pose
             self._server.set_succeeded(self._result)
             
-            # Publish feedback with latest detection position
-            self.publish_feedback(sm.userdata.latest_detection_pose or Pose())
+            # Publish feedback with just the pose
+            self.publish_feedback(last_pose)
         elif outcome == 'preempted':
             self._server.set_preempted()
         else:
@@ -101,11 +102,11 @@ class PatrolServer:
         goal.target_pose.pose.orientation.w = 1.0
         return goal
 
-    def publish_feedback(self, new_people, new_cats, new_dogs, last_pose):
-        feedback = PatrolFeedback()  # Use correct message type
-        feedback.new_people = new_people
-        feedback.new_cats = new_cats
-        feedback.new_dogs = new_dogs
+    def publish_feedback(self, last_pose):
+        feedback = PatrolFeedback()
+        feedback.new_people = 0  # Default to 0 for simplified feedback
+        feedback.new_cats = 0
+        feedback.new_dogs = 0
         feedback.last_detection_pose = last_pose
         self._server.publish_feedback(feedback)
 
