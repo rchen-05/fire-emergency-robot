@@ -3,6 +3,7 @@ import rospy
 from smach import State, StateMachine
 from geometry_msgs.msg import Pose
 import math
+from std_msgs.msg import String
 from states.navigation_state import NavigationState
 from states.detection_state import DetectionState
 from tf.transformations import quaternion_from_euler
@@ -31,16 +32,7 @@ class PatrolState(State):
             [7.5, 6.7],    # Bottom right
             
             # Room C
-            [10.7, 8.3],   # Center
-            [8.9, 9.9],    # Top left
-            [12.3, 9.9],   # Top right
-            [8.9, 6.7],    # Bottom left
-            [12.3, 6.7],   # Bottom right
-
-            # Room F
-            [10.0, 2.6],   # Center
-            [8.9, 4.2],   # Top left
-            [12.3, 4.2],   # Top right
+            [10.7, 8.3],   # Centerself.voice_pub = rospy.Publisher('/ros_vosk/text_to_speech', String, queue_size=10)
             [8.9, 1.6],   # Bottom left
             [12.3, 1.6],   # Bottom right
 
@@ -62,6 +54,8 @@ class PatrolState(State):
             
             
         ]
+
+        self.tts_pub = rospy.Publisher('/tts/phrase', String, queue_size=10)
         self.end_point = [6.0, 3.6]
 
         self.sm = StateMachine(

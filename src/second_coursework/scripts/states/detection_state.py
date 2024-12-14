@@ -3,7 +3,7 @@ import rospy
 from smach import State
 from geometry_msgs.msg import Pose
 from second_coursework.srv import YOLOLastFrame
-from sound_play.libsoundplay import SoundClient
+from std_msgs.msg import String
 from visualization_msgs.msg import Marker, MarkerArray
 import numpy as np
 
@@ -14,7 +14,7 @@ class DetectionState(State):
                       input_keys=['current_pose'],
                       output_keys=['latest_detection_pose'])  # Simplified to just track latest position
         
-        self.sound_client = SoundClient()
+        self.tts_pub = rospy.Publisher('/tts/phrase', String, queue_size=10)
         self.marker_pub = rospy.Publisher('/detection_markers', MarkerArray, queue_size=10)
         self.previous_detections = {
             'person': [],
@@ -90,7 +90,7 @@ class DetectionState(State):
                         self.publish_marker(current_pose, detection.name.lower(), True)
                         
                         if detection.name.lower() == 'person':
-                            self.sound_client.say("Help is coming. Please evacuate if possible.")
+                            self.tts_pub.publish("Fire! Help is coming. Evacuate the building.")
                             rospy.loginfo("Person detected! Announcing evacuation message.")
             
             return 'detected' if detected_anything else 'none'
