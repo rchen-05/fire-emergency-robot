@@ -43,24 +43,6 @@ class PatrolServer:
             rospy.logerr(f"Error initializing patrol server: {str(e)}")
             raise
 
-    def publish_detection(self, pose, detection_type, is_new=True):
-        marker = Marker()
-        marker.header.frame_id = "map"
-        marker.type = Marker.SPHERE
-        marker.pose = pose 
-        marker.scale.x = 0.3
-        marker.scale.y = 0.3
-        marker.scale.z = 0.3
-        marker.color.a = 1.0
-        # Red for new detections, blue for old
-        marker.color.r = 1.0 if is_new else 0.0
-        marker.color.b = 0.0 if is_new else 1.0
-        
-        self.markers.append(marker)
-        marker_array = MarkerArray(markers=self.markers)
-        self.marker_pub.publish(marker_array)
-
-    # In emergency_action_server.py, add to PatrolServer class:
 
     def execute_cb(self, goal):
         # Create state machine with minimal userdata

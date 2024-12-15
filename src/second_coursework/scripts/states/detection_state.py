@@ -15,12 +15,13 @@ class DetectionState(State):
                       output_keys=['latest_detection_pose'])  # Simplified to just track latest position
         
         self.tts_pub = rospy.Publisher('/tts/phrase', String, queue_size=10)
-        self.marker_pub = rospy.Publisher('/detection_markers', MarkerArray, queue_size=10)
+        self.marker_pub = rospy.Publisher('/detection_markers', Marker, queue_size=10)
         self.previous_detections = {
             'person': [],
             'cat': [],
             'dog': []
         }
+        self.marker_count = 0
         
         try:
             rospy.wait_for_service('/detect_frame', timeout=5.0)
@@ -29,14 +30,18 @@ class DetectionState(State):
         except rospy.ROSException:
             rospy.logerr("YOLO detection service not available")
 
-    def publish_marker(self, pose, detection_type, is_new=True):
+    def make_marker(self, pose, detection_type, is_new=True):
         marker = Marker()
         marker.header.frame_id = "map"
         marker.header.stamp = rospy.Time.now()
         marker.type = Marker.SPHERE
+        marker.action = Marker.ADD
         marker.pose = pose
         marker.scale.x = marker.scale.y = marker.scale.z = 0.3
         marker.color.a = 1.0
+
+        marker.id = self.marker_count
+        self.marker_count += 1
         
         # Different colors for different types
         if detection_type == 'person':
@@ -46,10 +51,13 @@ class DetectionState(State):
             marker.color.g = 1.0
         else:  # dog
             marker.color.b = 1.0
+            marker.color.g = 1.0 
+
+        marker.lifetime = rospy.Duration(0)
             
-        marker_array = MarkerArray()
-        marker_array.markers.append(marker)
-        self.marker_pub.publish(marker_array)
+        #marker_array = MarkerArray()
+        #marker_array.markers.append(marker)
+        return marker
 
     def is_new_detection(self, current_pose, previous_detections, distance_threshold=1.0):
         """Check if detection is new based on distance from previous detections"""
@@ -72,6 +80,9 @@ class DetectionState(State):
             response = self.detect_frame()
             rospy.loginfo(f"Got {len(response.detections)} YOLO detections")
             current_pose = userdata.current_pose
+            #marker = self.make_marker(current_pose, "dog", True)
+            #self.marker_pub.publish(marker)
+
             
             detected_anything = False
             
@@ -87,7 +98,8 @@ class DetectionState(State):
                         
                         # Still maintain markers and announcements
                         self.previous_detections[detection.name.lower()].append(current_pose)
-                        self.publish_marker(current_pose, detection.name.lower(), True)
+                        marker = self.make_marker(current_pose, detection.name.lower(), True)
+                        self.marker_pub.publish(marker)
                         
                         if detection.name.lower() == 'person':
                             self.tts_pub.publish("Fire! Help is coming. Evacuate the building.")

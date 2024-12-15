@@ -13,7 +13,6 @@ class YoloDetector:
     def __init__(self):
         self.cv_image = None
         self.bridge = CvBridge()
-        # Change to match video player's topic
         self.can_subs = rospy.Subscriber("/camera/image", Image, self.img_callback)
         self.yolo_srv = rospy.Service("/detect_frame", YOLOLastFrame, self.yolo_service)
         self.detector = Detector(gpu_id=0, config_path='/opt/darknet/cfg/yolov4.cfg',

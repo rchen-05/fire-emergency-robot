@@ -32,7 +32,16 @@ class PatrolState(State):
             [7.5, 6.7],    # Bottom right
             
             # Room C
-            [10.7, 8.3],   # Centerself.voice_pub = rospy.Publisher('/ros_vosk/text_to_speech', String, queue_size=10)
+            [10.0, 8.0],   # Center
+            [8.9, 9.9],    # Top left
+            [12.3, 9.9],   # Top right
+            [8.9, 6.7],    # Bottom left
+            [12.3, 6.7],   # Bottom right
+
+            # Room F
+            [10.0, 2.6],   # Center
+            [8.9, 4.2],   # Top left
+            [12.3, 4.2],   # Top right
             [8.9, 1.6],   # Bottom left
             [12.3, 1.6],   # Bottom right
 
@@ -49,10 +58,6 @@ class PatrolState(State):
             [2.9, 5.1],    # Top right
             [0.7, 1.7],    # Bottom left
             [2.9, 1.7],    # Bottom right
-            
-            
-            
-            
         ]
 
         self.tts_pub = rospy.Publisher('/tts/phrase', String, queue_size=10)
