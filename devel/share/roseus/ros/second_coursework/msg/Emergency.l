@@ -63,9 +63,8 @@
 (setf (get second_coursework::Emergency :md5sum-) "dacf83a9c1262fc213fc41089e525a3a")
 (setf (get second_coursework::Emergency :datatype-) "second_coursework/Emergency")
 (setf (get second_coursework::Emergency :definition-)
-      "# msg/Emergency.msg
-string description
-duration duration  # Changed from patrol_time to match error
+      "string description
+duration duration  
 ")
 
 

@@ -1,9 +1,0 @@
-Displays:
-  - Class: rviz/Map
-    Name: Map
-    Topic: /map
-  - Class: rviz/MarkerArray
-    Name: Detections
-    Topic: /patrol/detections
-  - Class: rviz/RobotModel
-    Name: TurtleBot3

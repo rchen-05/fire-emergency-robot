@@ -12,9 +12,8 @@ class Emergency(genpy.Message):
   _md5sum = "dacf83a9c1262fc213fc41089e525a3a"
   _type = "second_coursework/Emergency"
   _has_header = False  # flag to mark the presence of a Header object
-  _full_text = """# msg/Emergency.msg
-string description
-duration duration  # Changed from patrol_time to match error"""
+  _full_text = """string description
+duration duration  """
   __slots__ = ['description','duration']
   _slot_types = ['string','duration']
 

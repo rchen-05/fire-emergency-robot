@@ -34,13 +34,6 @@ class EmergencySubscriber:
         # Subscribe to emergency topic
         rospy.Subscriber('/emergency', Emergency, self.emergency_callback)
         rospy.loginfo("Emergency subscriber started and waiting for messages...")
-        
-        # Remove the automatic test publisher
-        # rospy.Timer(rospy.Duration(30.0), self.publish_test_emergency)
-
-    # Remove the test publishing method since we won't use it
-    # def publish_test_emergency(self, event):
-    #     ...
 
     def emergency_callback(self, msg):
         rospy.loginfo(f"Emergency: {msg.description}, Duration: {msg.duration.secs} seconds")

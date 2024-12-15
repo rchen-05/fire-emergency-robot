@@ -76,9 +76,8 @@ class Emergency {
   static messageDefinition() {
     // Returns full string definition for message
     return `
-    # msg/Emergency.msg
     string description
-    duration duration  # Changed from patrol_time to match error
+    duration duration  
     `;
   }
 

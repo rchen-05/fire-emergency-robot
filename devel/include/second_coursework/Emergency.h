@@ -152,9 +152,8 @@ struct Definition< ::second_coursework::Emergency_<ContainerAllocator> >
 {
   static const char* value()
   {
-    return "# msg/Emergency.msg\n"
-"string description\n"
-"duration duration  # Changed from patrol_time to match error\n"
+    return "string description\n"
+"duration duration  \n"
 ;
   }
 

@@ -7,8 +7,8 @@ from geometry_msgs.msg import Pose
 from smach import StateMachine
 from smach_ros import SimpleActionState
 from visualization_msgs.msg import Marker, MarkerArray
-from states.patrol_state import PatrolState  # Import PatrolState
-from move_base_msgs.msg import MoveBaseAction  # Add this import
+from states.patrol_state import PatrolState  
+from move_base_msgs.msg import MoveBaseAction  
 
 class PatrolServer:
     def __init__(self):
