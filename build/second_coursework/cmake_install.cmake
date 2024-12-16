@@ -111,11 +111,3 @@ if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_
   file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/second_coursework" TYPE FILE FILES "/home/k23020720/catkin_ws/src/second_coursework/package.xml")
 endif()
 
-if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/second_coursework" TYPE PROGRAM FILES "/home/k23020720/catkin_ws/build/second_coursework/catkin_generated/installspace/emergency_subscriber.py")
-endif()
-
-if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/second_coursework/launch" TYPE FILE FILES "/home/k23020720/catkin_ws/src/second_coursework/launch/itr_cw.launch")
-endif()
-

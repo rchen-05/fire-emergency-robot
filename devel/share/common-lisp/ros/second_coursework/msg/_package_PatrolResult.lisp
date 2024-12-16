@@ -1,4 +1,8 @@
 (cl:in-package second_coursework-msg)
-(cl:export '(LAST_DETECTION-VAL
-          LAST_DETECTION
+(cl:export '(PERSON_POSES-VAL
+          PERSON_POSES
+          CAT_POSES-VAL
+          CAT_POSES
+          DOG_POSES-VAL
+          DOG_POSES
 ))

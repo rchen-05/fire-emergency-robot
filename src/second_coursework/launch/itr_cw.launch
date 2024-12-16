@@ -1,19 +1,15 @@
 <launch>
-    <!-- Set sim time parameter -->
     <param name="/use_sim_time" value="true"/>
     <param name="/stage/use_sim_time" value="true"/>
 
     <!-- Define arguments -->
-    <arg name="vid_folder" default="$(find second_coursework)/videos"/>
+    <arg name="vid_folder" default="$(env HOME)/catkin_ws/videos"/>
 
-    <!-- Stage simulator with map -->
     <include file="$(find rosplan_stage_demo)/launch/empty_stage_single_robot.launch"/>
     
-    <!-- Video player that simulates camera feed -->
     <node name="video_player" pkg="second_coursework" type="itr_cw2425CS" 
           args="--video_folder $(arg vid_folder) --test"/>
     
-    <!-- Add YOLO detector with respawn -->
     <node name="yolo_detector" pkg="second_coursework" type="yolo_detector.py" 
           output="screen" respawn="true" respawn_delay="5"/>
     
@@ -21,21 +17,16 @@
     <arg name="startup_delay" default="2"/>
     <node name="startup_delay" pkg="rospy" type="sleep" args="$(arg startup_delay)"/>
     
-    <!-- Your nodes with respawn -->
-    <node name="patrol_action_server" pkg="second_coursework" type="emergency_action_server.py" 
+    <node name="patrol_action_server" pkg="second_coursework" type="action_server.py" 
           output="screen" respawn="true" respawn_delay="5"/>
-    <node name="emergency_subscriber" pkg="second_coursework" type="emergency_subscriber.py" 
+    <node name="emergency_subscriber" pkg="second_coursework" type="main.py" 
           output="screen" respawn="true" respawn_delay="5"/>
     
-
-    <!-- Add ROS Vosk Node -->
     <include file="$(find ros_vosk)/launch/ros_vosk.launch"/>
     <param name="/vosk/model_path" value="/opt/itr_ws/src/ros-vosk/models/vosk-model-small-en-us-0.15"/>
     
-    <!-- Visualization in RViz -->
     <node name="rviz" pkg="rviz" type="rviz" 
           args="-d $(find rosplan_stage_demo)/config/rosplan_stage_demo.rviz"/>
     
-    <!-- Add remap for clock -->
     <remap from="/clock" to="/stage/clock"/>
 </launch>

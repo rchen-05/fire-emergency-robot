@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 #coding=utf-8
 import rospy
-from cv_bridge import CvBridge  # Changed from cv_bridge3
-import cv2  # Direct import
+from cv_bridge import CvBridge  
+import cv2  
 from sensor_msgs.msg import Image     
 from second_coursework.srv import YOLOLastFrame, YOLOLastFrameResponse
 from second_coursework.msg import YOLODetection      
@@ -26,7 +26,7 @@ class YoloDetector:
 
     def yolo_service(self, request):
         res = YOLOLastFrameResponse()
-        if self.cv_image is None or self.cv_image.size == 0:  # Proper way to check numpy array
+        if self.cv_image is None or self.cv_image.size == 0: 
             rospy.logwarn("No image received")
             return res
             

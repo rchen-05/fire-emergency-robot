@@ -11,7 +11,7 @@ class NavigationState(State):
         State.__init__(self, 
                       outcomes=['reached', 'failed', 'preempted'],
                       input_keys=['target_pose'])
-        # Initialize userdata as instance variable
+
         self.userdata = type('', (), {})()
         
         self.move_base = actionlib.SimpleActionClient('move_base', MoveBaseAction)
@@ -23,7 +23,6 @@ class NavigationState(State):
         rospy.loginfo("Connected to move_base server")
 
     def execute(self, userdata):
-        # Update instance userdata with passed userdata
         rospy.loginfo("Navigating")
         self.userdata = userdata
         
@@ -31,10 +30,8 @@ class NavigationState(State):
         goal.target_pose.header.frame_id = "map"
         goal.target_pose.header.stamp = rospy.Time.now()
         
-        # Use the complete pose from input
         goal.target_pose.pose = userdata.target_pose
         
-        # Add retry logic with preemption check
         max_attempts = 3
         for attempt in range(max_attempts):
             if self.preempt_requested():
@@ -44,7 +41,6 @@ class NavigationState(State):
             rospy.loginfo(f"Navigation attempt {attempt + 1}/{max_attempts}")
             self.move_base.send_goal(goal)
             
-            # Wait for result with preemption check
             while not self.move_base.wait_for_result(rospy.Duration(1.0)):
                 if self.preempt_requested():
                     self.move_base.cancel_goal()

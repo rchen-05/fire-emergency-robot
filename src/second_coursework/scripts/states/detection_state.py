@@ -4,24 +4,21 @@ from smach import State
 from geometry_msgs.msg import Pose
 from second_coursework.srv import YOLOLastFrame
 from std_msgs.msg import String
-from visualization_msgs.msg import Marker, MarkerArray
+from visualization_msgs.msg import Marker
 import numpy as np
 
 class DetectionState(State):
-    def __init__(self):
+    def __init__(self, marker_pub, action_server):
         State.__init__(self,
                       outcomes=['detected', 'none', 'preempted'],
-                      input_keys=['current_pose'],
-                      output_keys=['latest_detection_pose'])  # Simplified to just track latest position
+                      input_keys=['current_pose', 'person_poses', 'cat_poses', 'dog_poses', 
+                                'latest_detection_pose'],
+                      output_keys=['latest_detection_pose', 'person_poses', 'cat_poses', 'dog_poses'])  
         
         self.tts_pub = rospy.Publisher('/tts/phrase', String, queue_size=10)
-        self.marker_pub = rospy.Publisher('/detection_markers', Marker, queue_size=10)
-        self.previous_detections = {
-            'person': [],
-            'cat': [],
-            'dog': []
-        }
+        self.marker_pub = marker_pub
         self.marker_count = 0
+        self.action_server = action_server
         
         try:
             rospy.wait_for_service('/detect_frame', timeout=5.0)
@@ -42,8 +39,7 @@ class DetectionState(State):
 
         marker.id = self.marker_count
         self.marker_count += 1
-        
-        # Different colors for different types
+
         if detection_type == 'person':
             marker.color.r = 1.0 if is_new else 0.0
             marker.color.b = 0.0 if is_new else 1.0
@@ -54,9 +50,6 @@ class DetectionState(State):
             marker.color.g = 1.0 
 
         marker.lifetime = rospy.Duration(0)
-            
-        #marker_array = MarkerArray()
-        #marker_array.markers.append(marker)
         return marker
 
     def is_new_detection(self, current_pose, previous_detections, distance_threshold=1.0):
@@ -76,34 +69,40 @@ class DetectionState(State):
             return 'preempted'
 
         try:
-            rospy.loginfo("Requesting YOLO detection...")
             response = self.detect_frame()
-            rospy.loginfo(f"Got {len(response.detections)} YOLO detections")
             current_pose = userdata.current_pose
-            #marker = self.make_marker(current_pose, "dog", True)
-            #self.marker_pub.publish(marker)
-
-            
             detected_anything = False
             
             for detection in response.detections:
                 if detection.confidence < 0.5:
                     continue
                 
-                # Any valid detection will update the latest position
-                if detection.name.lower() in ['person', 'cat', 'dog']:
-                    if self.is_new_detection(current_pose, self.previous_detections[detection.name.lower()]):
+                if detection.name.lower() == 'person':
+                    if self.is_new_detection(current_pose, userdata.person_poses):
                         detected_anything = True
-                        userdata.latest_detection_pose = current_pose
-                        
-                        # Still maintain markers and announcements
-                        self.previous_detections[detection.name.lower()].append(current_pose)
-                        marker = self.make_marker(current_pose, detection.name.lower(), True)
+                        userdata.person_poses.append(current_pose)
+                        marker = self.make_marker(current_pose, 'person', True)
                         self.marker_pub.publish(marker)
-                        
-                        if detection.name.lower() == 'person':
-                            self.tts_pub.publish("Fire! Help is coming. Evacuate the building.")
-                            rospy.loginfo("Person detected! Announcing evacuation message.")
+                        self.tts_pub.publish("Fire! Help is coming. Evacuate the building.")
+                        userdata.latest_detection_pose = current_pose
+                        # Publish feedback immediately when person is detected
+                        self.action_server.publish_detection_feedback(userdata)
+                
+                elif detection.name.lower() == 'cat':
+                    if self.is_new_detection(current_pose, userdata.cat_poses):
+                        detected_anything = True
+                        userdata.cat_poses.append(current_pose)
+                        marker = self.make_marker(current_pose, 'cat', True)
+                        self.marker_pub.publish(marker)
+                        userdata.latest_detection_pose = current_pose
+                
+                elif detection.name.lower() == 'dog':
+                    if self.is_new_detection(current_pose, userdata.dog_poses):
+                        detected_anything = True
+                        userdata.dog_poses.append(current_pose)
+                        marker = self.make_marker(current_pose, 'dog', True)
+                        self.marker_pub.publish(marker)
+                        userdata.latest_detection_pose = current_pose
             
             return 'detected' if detected_anything else 'none'
             
